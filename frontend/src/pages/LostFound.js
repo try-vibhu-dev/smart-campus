@@ -31,6 +31,7 @@ const LostFound = () => {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const delay = setTimeout(() => fetchPosts(), 300);
     return () => clearTimeout(delay);

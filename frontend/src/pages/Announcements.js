@@ -22,6 +22,7 @@ const Announcements = () => {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const delay = setTimeout(() => fetchAnnouncements(), 300);
     return () => clearTimeout(delay);

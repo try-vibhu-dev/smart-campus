@@ -28,6 +28,7 @@ const Complaints = () => {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const delay = setTimeout(() => fetchComplaints(), 300);
     return () => clearTimeout(delay);

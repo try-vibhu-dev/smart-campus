@@ -75,8 +75,9 @@ exports.register = async (req, res) => {
       user: { id: user._id, name: user.name, email: user.email, role: user.role }
     });
   } catch (error) {
+    console.error('LOGIN ERROR:', error.message);
     res.status(500).json({ message: 'Server error', error: error.message });
-  }
+}
 };
 
 // Login - Step 1 (verify credentials and send OTP)

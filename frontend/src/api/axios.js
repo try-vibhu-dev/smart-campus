@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: 'http://10.142.115.28:5000/api'
+  baseURL: 'https://https://smart-campus-5afh.onrender.com/api'
 });
 
 API.interceptors.request.use((req) => {

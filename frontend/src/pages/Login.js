@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 
 const AuthPage = () => {
-  const { darkMode } = useAuth();
+ const { darkMode, loginUser } = useAuth();
   const navigate = useNavigate();
   const [isRegister, setIsRegister] = useState(false);
 
@@ -123,7 +123,12 @@ const AuthPage = () => {
     setLoginServerError('');
     try {
       const res = await API.post('/auth/login', loginForm);
-      navigate('/verify-otp', { state: { email: res.data.email } });
+if (res.data.token) {
+  loginUser(res.data.user, res.data.token);
+  navigate('/dashboard');
+} else {
+  navigate('/verify-otp', { state: { email: res.data.email } });
+}
     } catch (err) {
       setLoginServerError(err.response?.data?.message || 'Login failed.');
     }

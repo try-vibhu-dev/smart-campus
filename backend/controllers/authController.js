@@ -6,10 +6,12 @@ const crypto = require('crypto');
 
 // ── EMAIL TRANSPORTER ──
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: process.env.BREVO_HOST,
+  port: parseInt(process.env.BREVO_PORT),
+  secure: false,
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
+    user: process.env.BREVO_USER,
+    pass: process.env.BREVO_PASS
   }
 });
 

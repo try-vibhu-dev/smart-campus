@@ -4,7 +4,7 @@ const { sendNotificationToAll } = require('./notificationController');
 exports.createPost = async (req, res) => {
   try {
     const { title, description, type, location, contactInfo } = req.body;
-    const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+    const imageUrl = req.file ? req.file.path : null;
 
     const post = await LostFound.create({
       title, description, type, location, imageUrl, contactInfo, postedBy: req.user.id

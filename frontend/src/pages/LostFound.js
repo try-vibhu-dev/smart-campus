@@ -99,8 +99,6 @@ const LostFound = () => {
     ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-500 focus:border-blue-500'
     : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400 focus:border-blue-500';
 
-  const API_BASE = 'http://localhost:5000';
-
   return (
     <div className={`min-h-screen ${bg} p-8`}>
       <div className="max-w-4xl mx-auto">
@@ -257,7 +255,7 @@ const LostFound = () => {
                 <div key={p._id} className={`rounded-xl overflow-hidden border hover-lift animate-fade-up delay-${Math.min(i + 1, 6)} ${inner}`}>
                   {p.imageUrl ? (
                     <img
-                      src={`${API_BASE}${p.imageUrl}`}
+                      src={p.imageUrl}
                       alt={p.title}
                       className="w-full h-40 object-cover"
                     />

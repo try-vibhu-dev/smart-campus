@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import API from '../api/axios';
 import { useAuth } from '../context/AuthContext';
-import { Search, X } from 'lucide-react';
+import { Search, X, Trash2 } from 'lucide-react';
 
 const Complaints = () => {
-  const { darkMode } = useAuth();
+  const { darkMode, user } = useAuth();
   const [complaints, setComplaints] = useState([]);
   const [form, setForm] = useState({ title: '', description: '', category: 'wifi' });
   const [loading, setLoading] = useState(false);
@@ -46,6 +46,16 @@ const Complaints = () => {
       setMessage('Failed to submit complaint');
     }
     setLoading(false);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this complaint?')) return;
+    try {
+      await API.delete(`/complaints/${id}`);
+      setComplaints(complaints.filter(c => c._id !== id));
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const statusColor = (status) => {
@@ -130,7 +140,6 @@ const Complaints = () => {
             )}
           </div>
 
-          {/* Search + Filters */}
           <div className="flex flex-col md:flex-row gap-3 mb-5">
             <div className="relative flex-1">
               <Search size={16} className="absolute left-3 top-3.5 text-gray-400" />
@@ -173,14 +182,23 @@ const Complaints = () => {
               {complaints.map((c, i) => (
                 <div key={c._id} className={`rounded-xl p-4 border hover-lift animate-fade-up delay-${Math.min(i + 1, 6)} ${inner}`}>
                   <div className="flex justify-between items-start">
-                    <div>
+                    <div className="flex-1 mr-3">
                       <h3 className={`font-medium ${heading}`}>{c.title}</h3>
                       <p className={`text-sm mt-1 ${sub}`}>{c.description}</p>
                       <span className={`text-xs mt-2 block capitalize ${sub}`}>Category: {c.category}</span>
                     </div>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium flex-shrink-0 ${statusColor(c.status)}`}>
-                      {c.status}
-                    </span>
+                    <div className="flex items-center space-x-2 flex-shrink-0">
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColor(c.status)}`}>
+                        {c.status}
+                      </span>
+                      <button
+                        onClick={() => handleDelete(c._id)}
+                        className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-all duration-200"
+                        title="Delete complaint"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}

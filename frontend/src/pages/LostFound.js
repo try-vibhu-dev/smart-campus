@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import API from '../api/axios';
 import { useAuth } from '../context/AuthContext';
-import { Package, Search, X, Upload, Image as ImageIcon } from 'lucide-react';
+import { Package, Search, X, Upload, Image as ImageIcon, Trash2 } from 'lucide-react';
 
 const LostFound = () => {
-  const { darkMode } = useAuth();
+  const { darkMode, user } = useAuth();
   const [posts, setPosts] = useState([]);
   const [form, setForm] = useState({ title: '', description: '', type: 'lost', location: '', contactInfo: '' });
   const [imageFile, setImageFile] = useState(null);
@@ -40,12 +40,10 @@ const LostFound = () => {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     if (file.size > 5 * 1024 * 1024) {
       setMessage('Image must be under 5MB');
       return;
     }
-
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
   };
@@ -80,6 +78,16 @@ const LostFound = () => {
       setMessage(err.response?.data?.message || 'Failed to create post');
     }
     setLoading(false);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this post?')) return;
+    try {
+      await API.delete(`/lostfound/${id}`);
+      setPosts(posts.filter(p => p._id !== id));
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const clearFilters = () => {
@@ -158,7 +166,6 @@ const LostFound = () => {
               <label className={`text-sm font-medium block mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                 Photo (optional)
               </label>
-
               {!imagePreview ? (
                 <button
                   type="button"
@@ -183,7 +190,6 @@ const LostFound = () => {
                   </button>
                 </div>
               )}
-
               <input
                 type="file"
                 ref={fileInputRef}
@@ -254,11 +260,7 @@ const LostFound = () => {
               {posts.map((p, i) => (
                 <div key={p._id} className={`rounded-xl overflow-hidden border hover-lift animate-fade-up delay-${Math.min(i + 1, 6)} ${inner}`}>
                   {p.imageUrl ? (
-                    <img
-                      src={p.imageUrl}
-                      alt={p.title}
-                      className="w-full h-40 object-cover"
-                    />
+                    <img src={p.imageUrl} alt={p.title} className="w-full h-40 object-cover" />
                   ) : (
                     <div className={`w-full h-24 flex items-center justify-center ${darkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
                       <ImageIcon size={24} className="text-gray-500" />
@@ -276,6 +278,15 @@ const LostFound = () => {
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${p.type === 'lost' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>
                           {p.type}
                         </span>
+                        {(user?.role === 'admin' || p.postedBy?._id === user?.id) && (
+                          <button
+                            onClick={() => handleDelete(p._id)}
+                            className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-all duration-200"
+                            title="Delete post"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                       </div>
                     </div>
                     <p className={`text-sm ${sub}`}>{p.description}</p>

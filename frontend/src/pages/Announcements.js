@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import API from '../api/axios';
 import { useAuth } from '../context/AuthContext';
-import { Bell, Search, X } from 'lucide-react';
+import { Bell, Search, X, Trash2 } from 'lucide-react';
 
 const Announcements = () => {
-  const { darkMode } = useAuth();
+  const { darkMode, user } = useAuth();
   const [announcements, setAnnouncements] = useState([]);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -27,6 +27,16 @@ const Announcements = () => {
     const delay = setTimeout(() => fetchAnnouncements(), 300);
     return () => clearTimeout(delay);
   }, [search, categoryFilter]);
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this announcement?')) return;
+    try {
+      await API.delete(`/announcements/${id}`);
+      setAnnouncements(announcements.filter(a => a._id !== id));
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const categoryColor = (cat) => {
     const colors = {
@@ -103,10 +113,21 @@ const Announcements = () => {
             {announcements.map((a, i) => (
               <div key={a._id} className={`border rounded-2xl p-6 hover-lift animate-fade-up delay-${Math.min(i + 1, 6)} ${card}`}>
                 <div className="flex justify-between items-start mb-3">
-                  <h2 className={`text-xl font-semibold ${heading}`}>{a.title}</h2>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize flex-shrink-0 ml-3 ${categoryColor(a.category)}`}>
-                    {a.category}
-                  </span>
+                  <h2 className={`text-xl font-semibold flex-1 mr-3 ${heading}`}>{a.title}</h2>
+                  <div className="flex items-center space-x-2 flex-shrink-0">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${categoryColor(a.category)}`}>
+                      {a.category}
+                    </span>
+                    {(user?.role === 'admin' || user?.role === 'professor') && (
+                      <button
+                        onClick={() => handleDelete(a._id)}
+                        className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-all duration-200"
+                        title="Delete announcement"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <p className={body}>{a.content}</p>
                 <p className={`text-sm mt-3 ${sub}`}>

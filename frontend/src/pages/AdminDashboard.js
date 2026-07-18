@@ -4,14 +4,15 @@ import { useAuth } from '../context/AuthContext';
 import {
   Users, AlertCircle, Bell, Package,
   BookOpen, CheckCircle, Clock, Loader,
-  TrendingUp, ChevronRight, UserPlus, BarChart2
+  TrendingUp, ChevronRight, UserPlus,
+  BarChart2, Image as ImageIcon, X
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
 } from 'recharts';
-import { Users, AlertCircle, Bell, Package, BookOpen, CheckCircle, Clock, Loader, TrendingUp, ChevronRight, UserPlus, Image as ImageIcon, X } from 'lucide-react';
+
 
 const AdminDashboard = () => {
   const { darkMode } = useAuth();

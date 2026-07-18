@@ -261,7 +261,7 @@ const StudentDashboard = () => {
             ].map(({ label, value }) => (
               <div key={label}>
                 <p className={`text-xs ${sub}`}>{label}</p>
-                <p className={`font-medium capitalize text-sm mt-0.5 ${heading}`}>{value}</p>
+                <p className={`font-medium text-sm mt-0.5 ${heading} ${label === 'Email' ? 'lowercase' : 'capitalize'}`}>{value}</p>
               </div>
             ))}
           </div>

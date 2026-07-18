@@ -24,4 +24,11 @@ const adminOnly = (req, res, next) => {
   next();
 };
 
-module.exports = { protect, adminOnly };
+const staffOnly = (req, res, next) => {
+  if (req.user.role !== 'admin' && req.user.role !== 'professor') {
+    return res.status(403).json({ message: 'Admin or Professor access only' });
+  }
+  next();
+};
+
+module.exports = { protect, adminOnly, staffOnly };

@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import API from '../api/axios';
 import { useAuth } from '../context/AuthContext';
-import { Search, X, Trash2 } from 'lucide-react';
+import { Search, X, Trash2, User, Hash, BookOpen, Mail } from 'lucide-react';
 
 const Complaints = () => {
   const { darkMode, user } = useAuth();
+  const isStaff = user?.role === 'admin' || user?.role === 'professor';
+
   const [complaints, setComplaints] = useState([]);
   const [form, setForm] = useState({ title: '', description: '', category: 'wifi' });
   const [loading, setLoading] = useState(false);
@@ -21,7 +23,8 @@ const Complaints = () => {
       if (statusFilter) params.status = statusFilter;
       if (categoryFilter) params.category = categoryFilter;
 
-      const res = await API.get('/complaints/my', { params });
+      const endpoint = isStaff ? '/complaints/all' : '/complaints/my';
+      const res = await API.get(endpoint, { params });
       setComplaints(res.data.complaints);
     } catch (err) {
       console.error(err);
@@ -58,6 +61,15 @@ const Complaints = () => {
     }
   };
 
+  const handleStatusChange = async (id, status) => {
+    try {
+      await API.put(`/complaints/${id}`, { status });
+      fetchComplaints();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const statusColor = (status) => {
     if (status === 'pending') return 'bg-yellow-500/20 text-yellow-400';
     if (status === 'in-progress') return 'bg-blue-500/20 text-blue-400';
@@ -80,59 +92,70 @@ const Complaints = () => {
   const input = darkMode
     ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-500 focus:border-blue-500'
     : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400 focus:border-blue-500';
+  const statusSelect = darkMode
+    ? 'bg-gray-700 border-gray-600 text-white'
+    : 'bg-white border-gray-300 text-gray-900';
 
   return (
     <div className={`min-h-screen ${bg} p-8`}>
-      <div className="max-w-4xl mx-auto">
-        <h1 className={`text-3xl font-bold mb-8 animate-fade-up ${heading}`}>Complaint Management</h1>
+      <div className="max-w-5xl mx-auto">
+        <h1 className={`text-3xl font-bold mb-8 animate-fade-up ${heading}`}>
+          {isStaff ? 'Complaint Management' : 'My Complaints'}
+        </h1>
 
-        <div className={`border rounded-2xl p-6 mb-8 hover-lift animate-fade-up delay-1 ${card}`}>
-          <h2 className={`text-xl font-semibold mb-4 ${heading}`}>Submit a Complaint</h2>
-          {message && (
-            <div className="bg-blue-900/50 border border-blue-500 text-blue-300 px-4 py-3 rounded-lg mb-4 text-sm animate-pop-in">
-              {message}
-            </div>
-          )}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <input
-              type="text"
-              placeholder="Complaint Title"
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              className={`w-full border px-4 py-3 rounded-lg focus:outline-none transition-all duration-200 text-sm ${input}`}
-              required
-            />
-            <select
-              value={form.category}
-              onChange={(e) => setForm({ ...form, category: e.target.value })}
-              className={`w-full border px-4 py-3 rounded-lg focus:outline-none transition-all duration-200 text-sm ${input}`}
-            >
-              <option value="wifi">WiFi Issue</option>
-              <option value="classroom">Classroom Issue</option>
-              <option value="hostel">Hostel Issue</option>
-              <option value="library">Library Issue</option>
-              <option value="other">Other</option>
-            </select>
-            <textarea
-              placeholder="Describe your complaint..."
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              className={`w-full border px-4 py-3 rounded-lg focus:outline-none transition-all duration-200 text-sm h-32 ${input}`}
-              required
-            />
-            <button
-              type="submit"
-              disabled={loading}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium text-sm transition-all duration-200 hover:scale-[1.02] disabled:opacity-60 disabled:hover:scale-100"
-            >
-              {loading ? 'Submitting...' : 'Submit Complaint'}
-            </button>
-          </form>
-        </div>
+        {/* Submit form — students only */}
+        {!isStaff && (
+          <div className={`border rounded-2xl p-6 mb-8 hover-lift animate-fade-up delay-1 ${card}`}>
+            <h2 className={`text-xl font-semibold mb-4 ${heading}`}>Submit a Complaint</h2>
+            {message && (
+              <div className="bg-blue-900/50 border border-blue-500 text-blue-300 px-4 py-3 rounded-lg mb-4 text-sm animate-pop-in">
+                {message}
+              </div>
+            )}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <input
+                type="text"
+                placeholder="Complaint Title"
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                className={`w-full border px-4 py-3 rounded-lg focus:outline-none transition-all duration-200 text-sm ${input}`}
+                required
+              />
+              <select
+                value={form.category}
+                onChange={(e) => setForm({ ...form, category: e.target.value })}
+                className={`w-full border px-4 py-3 rounded-lg focus:outline-none transition-all duration-200 text-sm ${input}`}
+              >
+                <option value="wifi">WiFi Issue</option>
+                <option value="classroom">Classroom Issue</option>
+                <option value="hostel">Hostel Issue</option>
+                <option value="library">Library Issue</option>
+                <option value="other">Other (describe below)</option>
+              </select>
+              <textarea
+                placeholder="Describe your complaint... if it's not one of the categories above, explain it fully here"
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                className={`w-full border px-4 py-3 rounded-lg focus:outline-none transition-all duration-200 text-sm h-32 ${input}`}
+                required
+              />
+              <button
+                type="submit"
+                disabled={loading}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium text-sm transition-all duration-200 hover:scale-[1.02] disabled:opacity-60 disabled:hover:scale-100"
+              >
+                {loading ? 'Submitting...' : 'Submit Complaint'}
+              </button>
+            </form>
+          </div>
+        )}
 
+        {/* List */}
         <div className={`border rounded-2xl p-6 hover-lift animate-fade-up delay-2 ${card}`}>
           <div className="flex items-center justify-between mb-4">
-            <h2 className={`text-xl font-semibold ${heading}`}>My Complaints</h2>
+            <h2 className={`text-xl font-semibold ${heading}`}>
+              {isStaff ? 'All Complaints' : 'My Complaints'}
+            </h2>
             {hasFilters && (
               <button onClick={clearFilters} className={`text-xs flex items-center space-x-1 hover:underline transition-colors duration-200 ${sub}`}>
                 <X size={14} /><span>Clear filters</span>
@@ -186,11 +209,49 @@ const Complaints = () => {
                       <h3 className={`font-medium ${heading}`}>{c.title}</h3>
                       <p className={`text-sm mt-1 ${sub}`}>{c.description}</p>
                       <span className={`text-xs mt-2 block capitalize ${sub}`}>Category: {c.category}</span>
+
+                      {/* Staff-only: full student details */}
+                      {isStaff && c.student && (
+                        <div className={`mt-3 pt-3 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex flex-wrap gap-x-4 gap-y-1`}>
+                          <span className={`text-xs flex items-center gap-1 ${sub}`}>
+                            <User size={12} /> {c.student.name}
+                          </span>
+                          <span className={`text-xs flex items-center gap-1 ${sub}`}>
+                            <Mail size={12} /> {c.student.email}
+                          </span>
+                          {c.student.enrollmentNumber && (
+                            <span className={`text-xs flex items-center gap-1 ${sub}`}>
+                              <Hash size={12} /> {c.student.enrollmentNumber}
+                            </span>
+                          )}
+                          {c.student.department && (
+                            <span className={`text-xs flex items-center gap-1 ${sub}`}>
+                              <BookOpen size={12} /> {c.student.department}
+                            </span>
+                          )}
+                          <span className={`text-xs ${sub}`}>
+                            {new Date(c.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                    <div className="flex items-center space-x-2 flex-shrink-0">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColor(c.status)}`}>
-                        {c.status}
-                      </span>
+
+                    <div className="flex flex-col items-end space-y-2 flex-shrink-0">
+                      {isStaff ? (
+                        <select
+                          value={c.status}
+                          onChange={(e) => handleStatusChange(c._id, e.target.value)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${statusSelect}`}
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="in-progress">In Progress</option>
+                          <option value="resolved">Resolved</option>
+                        </select>
+                      ) : (
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColor(c.status)}`}>
+                          {c.status}
+                        </span>
+                      )}
                       <button
                         onClick={() => handleDelete(c._id)}
                         className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-all duration-200"

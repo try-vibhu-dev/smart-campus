@@ -190,7 +190,7 @@ const Classroom = () => {
                       <p className={`text-sm font-medium mb-2 ${heading}`}>Schedule:</p>
                       {room.schedule.map((s, i) => (
                         <div key={i} className={`rounded-lg p-2 mb-2 text-xs ${darkMode ? 'bg-gray-900 text-gray-400' : 'bg-white text-gray-500 border border-gray-200'}`}>
-                          {s.day} | {s.startTime} - {s.endTime} | {s.subject}
+                          {s.day} | {s.startTime} - {s.endTime} | {s.subject} {s.teacher ? `• ${s.teacher}` : ''}
                         </div>
                       ))}
                     </div>

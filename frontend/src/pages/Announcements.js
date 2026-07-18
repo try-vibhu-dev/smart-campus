@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import API from '../api/axios';
 import { useAuth } from '../context/AuthContext';
-import { Bell, Search, X, Trash2 } from 'lucide-react';
+import { Bell, Search, X, Trash2, Image as ImageIcon } from 'lucide-react';
 
 const Announcements = () => {
   const { darkMode, user } = useAuth();
@@ -77,7 +77,6 @@ const Announcements = () => {
           )}
         </div>
 
-        {/* Search + Filter */}
         <div className="flex flex-col md:flex-row gap-3 mb-6 animate-fade-up delay-1">
           <div className="relative flex-1">
             <Search size={16} className="absolute left-3 top-3.5 text-gray-400" />
@@ -111,28 +110,40 @@ const Announcements = () => {
         ) : (
           <div className="space-y-4">
             {announcements.map((a, i) => (
-              <div key={a._id} className={`border rounded-2xl p-6 hover-lift animate-fade-up delay-${Math.min(i + 1, 6)} ${card}`}>
-                <div className="flex justify-between items-start mb-3">
-                  <h2 className={`text-xl font-semibold flex-1 mr-3 ${heading}`}>{a.title}</h2>
-                  <div className="flex items-center space-x-2 flex-shrink-0">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${categoryColor(a.category)}`}>
-                      {a.category}
-                    </span>
-                    {(user?.role === 'admin' || user?.role === 'professor') && (
-                      <button
-                        onClick={() => handleDelete(a._id)}
-                        className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-all duration-200"
-                        title="Delete announcement"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
+              <div key={a._id} className={`border rounded-2xl overflow-hidden hover-lift animate-fade-up delay-${Math.min(i + 1, 6)} ${card}`}>
+
+                {/* Image if present */}
+                {a.imageUrl ? (
+                  <img
+                    src={a.imageUrl}
+                    alt={a.title}
+                    className="w-full h-48 object-cover"
+                  />
+                ) : null}
+
+                <div className="p-6">
+                  <div className="flex justify-between items-start mb-3">
+                    <h2 className={`text-xl font-semibold flex-1 mr-3 ${heading}`}>{a.title}</h2>
+                    <div className="flex items-center space-x-2 flex-shrink-0">
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${categoryColor(a.category)}`}>
+                        {a.category}
+                      </span>
+                      {(user?.role === 'admin' || user?.role === 'professor') && (
+                        <button
+                          onClick={() => handleDelete(a._id)}
+                          className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-all duration-200"
+                          title="Delete announcement"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
                   </div>
+                  <p className={body}>{a.content}</p>
+                  <p className={`text-sm mt-3 ${sub}`}>
+                    Posted by {a.postedBy?.name} • {new Date(a.createdAt).toLocaleDateString()}
+                  </p>
                 </div>
-                <p className={body}>{a.content}</p>
-                <p className={`text-sm mt-3 ${sub}`}>
-                  Posted by {a.postedBy?.name} • {new Date(a.createdAt).toLocaleDateString()}
-                </p>
               </div>
             ))}
           </div>

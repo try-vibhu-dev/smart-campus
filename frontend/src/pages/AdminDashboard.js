@@ -11,6 +11,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
 } from 'recharts';
+import { Users, AlertCircle, Bell, Package, BookOpen, CheckCircle, Clock, Loader, TrendingUp, ChevronRight, UserPlus, Image as ImageIcon, X } from 'lucide-react';
 
 const AdminDashboard = () => {
   const { darkMode } = useAuth();
@@ -20,6 +21,9 @@ const AdminDashboard = () => {
   const [announcement, setAnnouncement] = useState({ title: '', content: '', category: 'general' });
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [announcementImage, setAnnouncementImage] = useState(null);
+  const [announcementImagePreview, setAnnouncementImagePreview] = useState(null);
+  const announcementImageRef = React.useRef(null);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -42,14 +46,27 @@ const AdminDashboard = () => {
   };
 
   const handleAnnouncement = async (e) => {
-    e.preventDefault();
-    try {
-      await API.post('/announcements', announcement);
-      setMessage('Announcement posted successfully!');
-      setAnnouncement({ title: '', content: '', category: 'general' });
-      setTimeout(() => setMessage(''), 3000);
-    } catch (err) { setMessage('Failed to post announcement'); }
-  };
+  e.preventDefault();
+  try {
+    const formData = new FormData();
+    formData.append('title', announcement.title);
+    formData.append('content', announcement.content);
+    formData.append('category', announcement.category);
+    if (announcementImage) formData.append('image', announcementImage);
+
+    await API.post('/announcements', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+
+    setMessage('Announcement posted successfully!');
+    setAnnouncement({ title: '', content: '', category: 'general' });
+    setAnnouncementImage(null);
+    setAnnouncementImagePreview(null);
+    setTimeout(() => setMessage(''), 3000);
+  } catch (err) {
+    setMessage('Failed to post announcement');
+  }
+};
 
   const statusColor = (status) => {
     if (status === 'pending') return 'bg-yellow-500/20 text-yellow-400';
@@ -264,6 +281,48 @@ const AdminDashboard = () => {
                 onChange={(e) => setAnnouncement({ ...announcement, content: e.target.value })}
                 className={`w-full border px-4 py-2.5 rounded-xl focus:outline-none transition text-sm h-28 ${input}`}
                 required />
+              {/* Image Upload */}
+              <div>
+                <label className={`text-xs font-medium block mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Attach Image (optional)
+                </label>
+                {!announcementImagePreview ? (
+                  <button
+                    type="button"
+                    onClick={() => announcementImageRef.current?.click()}
+                    className={`w-full border-2 border-dashed rounded-xl py-4 flex items-center justify-center gap-2 text-xs transition-all duration-200 ${
+                      darkMode ? 'border-gray-600 hover:border-blue-500 text-gray-400' : 'border-gray-300 hover:border-blue-500 text-gray-500'
+                    }`}
+                  >
+                    <ImageIcon size={16} />
+                    <span>Click to attach image</span>
+                  </button>
+                ) : (
+                  <div className="relative inline-block">
+                    <img src={announcementImagePreview} alt="Preview" className="h-24 rounded-lg object-cover border border-gray-600" />
+                    <button
+                      type="button"
+                      onClick={() => { setAnnouncementImage(null); setAnnouncementImagePreview(null); }}
+                      className="absolute -top-2 -right-2 bg-red-600 hover:bg-red-700 text-white rounded-full p-1"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                )}
+                <input
+                  type="file"
+                  ref={announcementImageRef}
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      setAnnouncementImage(file);
+                      setAnnouncementImagePreview(URL.createObjectURL(file));
+                    }
+                  }}
+                  className="hidden"
+                />
+              </div>
               <button type="submit"
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-medium text-sm transition-all duration-200 hover:scale-[1.02]">
                 Post Announcement

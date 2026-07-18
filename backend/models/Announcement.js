@@ -8,6 +8,7 @@ const announcementSchema = new mongoose.Schema({
     enum: ['event', 'exam', 'seminar', 'placement', 'general'],
     default: 'general'
   },
+  imageUrl: { type: String, default: null },
   postedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   createdAt: { type: Date, default: Date.now }
 });

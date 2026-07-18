@@ -4,11 +4,12 @@ const { sendNotificationToAll } = require('./notificationController');
 exports.createAnnouncement = async (req, res) => {
   try {
     const { title, content, category } = req.body;
+    const imageUrl = req.file ? req.file.path : null;
+
     const announcement = await Announcement.create({
-      title, content, category, postedBy: req.user.id
+      title, content, category, imageUrl, postedBy: req.user.id
     });
 
-    // Send notification to all students
     await sendNotificationToAll(
       `📢 New Announcement: ${title}`,
       content.substring(0, 100) + (content.length > 100 ? '...' : ''),

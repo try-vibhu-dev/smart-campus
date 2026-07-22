@@ -13,6 +13,27 @@ const transporter = nodemailer.createTransport({
   tls: { rejectUnauthorized: false }
 });
 
+const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
+
+const sendOTPEmail = async (email, name, otp) => {
+  await transporter.sendMail({
+    from: `"Smart Campus" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: 'Smart Campus - Your Login OTP',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;">
+        <h2 style="color: #2563EB;">Login Verification</h2>
+        <p>Hi ${name},</p>
+        <p>Use the OTP below to complete your login. It expires in <strong>5 minutes</strong>.</p>
+        <div style="text-align: center; margin: 24px 0;">
+          <span style="font-size: 36px; font-weight: bold; letter-spacing: 10px; color: #1E3A5F;">${otp}</span>
+        </div>
+        <p style="color: #6B7280; font-size: 12px;">If you didn't try to login, you can safely ignore this email.</p>
+      </div>
+    `
+  });
+};
+
 // ── REGISTER ──
 exports.register = async (req, res) => {
   try {
@@ -51,7 +72,7 @@ exports.register = async (req, res) => {
   }
 };
 
-// ── LOGIN — direct, no OTP ──
+// ── LOGIN — Step 1: verify credentials, send OTP ──
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -61,6 +82,47 @@ exports.login = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
 
+    const otp = generateOTP();
+    user.otp = await bcrypt.hash(otp, 10);
+    user.otpExpire = new Date(Date.now() + 5 * 60 * 1000);
+    await user.save();
+
+    await sendOTPEmail(user.email, user.name, otp);
+
+    res.status(200).json({
+      message: 'OTP sent to your email',
+      email: user.email
+    });
+  } catch (error) {
+    console.error('LOGIN ERROR:', error.message);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// ── LOGIN — Step 2: verify OTP, issue token ──
+exports.verifyOTP = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ message: 'User not found' });
+
+    if (!user.otp || !user.otpExpire) {
+      return res.status(400).json({ message: 'No OTP requested. Please login again.' });
+    }
+    if (new Date() > user.otpExpire) {
+      user.otp = null;
+      user.otpExpire = null;
+      await user.save();
+      return res.status(400).json({ message: 'OTP has expired. Please login again.' });
+    }
+
+    const isMatch = await bcrypt.compare(otp, user.otp);
+    if (!isMatch) return res.status(400).json({ message: 'Invalid OTP. Please try again.' });
+
+    user.otp = null;
+    user.otpExpire = null;
+    await user.save();
+
     const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
     res.status(200).json({
@@ -69,7 +131,28 @@ exports.login = async (req, res) => {
       user: { id: user._id, name: user.name, email: user.email, role: user.role }
     });
   } catch (error) {
-    console.error('LOGIN ERROR:', error.message);
+    console.error('VERIFY OTP ERROR:', error.message);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// ── RESEND OTP ──
+exports.resendOTP = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ message: 'User not found' });
+
+    const otp = generateOTP();
+    user.otp = await bcrypt.hash(otp, 10);
+    user.otpExpire = new Date(Date.now() + 5 * 60 * 1000);
+    await user.save();
+
+    await sendOTPEmail(user.email, user.name, otp);
+
+    res.status(200).json({ message: 'New OTP sent to your email' });
+  } catch (error) {
+    console.error('RESEND OTP ERROR:', error.message);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };

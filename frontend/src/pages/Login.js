@@ -109,31 +109,27 @@ const AuthPage = () => {
     !validateLogin('email', loginForm.email) &&
     !validateLogin('password', loginForm.password);
 
-  const handleLoginSubmit = async (e) => {
-    e.preventDefault();
-    const allTouched = { email: true, password: true };
-    const allErrors = {
-      email: validateLogin('email', loginForm.email),
-      password: validateLogin('password', loginForm.password),
-    };
-    setLoginTouched(allTouched);
-    setLoginErrors(allErrors);
-    if (allErrors.email || allErrors.password) return;
-    setLoginLoading(true);
-    setLoginServerError('');
-    try {
-      const res = await API.post('/auth/login', loginForm);
-      if (res.data.token) {
-        loginUser(res.data.user, res.data.token);
-        navigate('/dashboard');
-      } else {
-        navigate('/verify-otp', { state: { email: res.data.email } });
-      }
-    } catch (err) {
-      setLoginServerError(err.response?.data?.message || 'Login failed.');
-    }
-    setLoginLoading(false);
+ const handleLoginSubmit = async (e) => {
+  e.preventDefault();
+  const allTouched = { email: true, password: true };
+  const allErrors = {
+    email: validateLogin('email', loginForm.email),
+    password: validateLogin('password', loginForm.password),
   };
+  setLoginTouched(allTouched);
+  setLoginErrors(allErrors);
+  if (allErrors.email || allErrors.password) return;
+  setLoginLoading(true);
+  setLoginServerError('');
+  try {
+    const res = await API.post('/auth/login', loginForm);
+    loginUser(res.data.user, res.data.token);
+    navigate('/dashboard');
+  } catch (err) {
+    setLoginServerError(err.response?.data?.message || 'Login failed.');
+  }
+  setLoginLoading(false);
+};
 
   const handleRegChange = (e) => {
     const { name, value } = e.target;

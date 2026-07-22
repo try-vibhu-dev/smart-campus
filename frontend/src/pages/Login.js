@@ -109,7 +109,7 @@ const AuthPage = () => {
     !validateLogin('email', loginForm.email) &&
     !validateLogin('password', loginForm.password);
 
- const handleLoginSubmit = async (e) => {
+const handleLoginSubmit = async (e) => {
   e.preventDefault();
   const allTouched = { email: true, password: true };
   const allErrors = {
@@ -123,8 +123,7 @@ const AuthPage = () => {
   setLoginServerError('');
   try {
     const res = await API.post('/auth/login', loginForm);
-    loginUser(res.data.user, res.data.token);
-    navigate('/dashboard');
+    navigate('/verify-otp', { state: { email: res.data.email } });
   } catch (err) {
     setLoginServerError(err.response?.data?.message || 'Login failed.');
   }

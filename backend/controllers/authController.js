@@ -1,23 +1,10 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
 const crypto = require('crypto');
+const { Resend } = require('resend');
 
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
-  family: 4,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  },
-  tls: { rejectUnauthorized: false },
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 10000
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // ── REGISTER ──
 exports.register = async (req, res) => {
@@ -80,17 +67,23 @@ exports.login = async (req, res) => {
   }
 };
 
-// ── TEST EMAIL — temporary, remove after Step 2 ──
+// ── TEST EMAIL — temporary, remove once confirmed working ──
 exports.testEmail = async (req, res) => {
   try {
-    const info = await transporter.sendMail({
-      from: `"Smart Campus" <${process.env.EMAIL_USER}>`,
+    const { data, error } = await resend.emails.send({
+      from: 'Smart Campus <onboarding@resend.dev>',
       to: process.env.EMAIL_USER,
-      subject: 'Smart Campus - Test Email',
-      text: 'If you received this, email sending works on Render.'
+      subject: 'Smart Campus - Test Email (Resend)',
+      html: '<p>If you received this, Resend is working on Render.</p>'
     });
-    console.log('TEST EMAIL SENT:', info.response);
-    res.status(200).json({ message: 'Test email sent', response: info.response });
+
+    if (error) {
+      console.error('TEST EMAIL ERROR:', error);
+      return res.status(500).json({ message: 'Test email failed', error });
+    }
+
+    console.log('TEST EMAIL SENT:', data);
+    res.status(200).json({ message: 'Test email sent', data });
   } catch (error) {
     console.error('TEST EMAIL ERROR:', error.message);
     res.status(500).json({ message: 'Test email failed', error: error.message });
@@ -112,8 +105,8 @@ exports.forgotPassword = async (req, res) => {
 
     const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
 
-    await transporter.sendMail({
-      from: `"Smart Campus" <${process.env.EMAIL_USER}>`,
+    const { error } = await resend.emails.send({
+      from: 'Smart Campus <onboarding@resend.dev>',
       to: email,
       subject: 'Smart Campus - Password Reset',
       html: `
@@ -125,6 +118,11 @@ exports.forgotPassword = async (req, res) => {
         </div>
       `
     });
+
+    if (error) {
+      console.error('FORGOT PASSWORD EMAIL ERROR:', error);
+      return res.status(500).json({ message: 'Failed to send reset email' });
+    }
 
     res.status(200).json({ message: 'Password reset link sent to your email' });
   } catch (error) {

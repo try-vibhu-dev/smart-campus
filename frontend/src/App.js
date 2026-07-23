@@ -5,9 +5,6 @@ import { NotificationProvider } from './context/NotificationContext';
 import PrivateRoute from './components/PrivateRoute';
 import Navbar from './components/Navbar';
 import Login from './pages/Login';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-import VerifyOTP from './pages/VerifyOTP';
 import StudentDashboard from './pages/StudentDashboard';
 import Complaints from './pages/Complaints';
 import Announcements from './pages/Announcements';
@@ -41,9 +38,6 @@ function App() {
               <Route path="/" element={<Landing />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Navigate to="/login" />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/reset-password/:token" element={<ResetPassword />} />
-              <Route path="/verify-otp" element={<VerifyOTP />} />
               <Route path="/dashboard" element={<PrivateRoute><StudentDashboard /></PrivateRoute>} />
               <Route path="/complaints" element={<PrivateRoute><Complaints /></PrivateRoute>} />
               <Route path="/announcements" element={<PrivateRoute><Announcements /></PrivateRoute>} />

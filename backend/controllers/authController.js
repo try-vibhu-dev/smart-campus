@@ -2,29 +2,39 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const { Resend } = require('resend');
+const sgMail = require('@sendgrid/mail');
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
+const sendEmail = async ({ to, subject, html }) => {
+  await sgMail.send({
+    to,
+    from: process.env.SENDGRID_FROM_EMAIL,
+    subject,
+    html
+  });
+};
 
 // ── REGISTER ──
 exports.register = async (req, res) => {
   try {
     const { name, email, password, role, enrollmentNumber, department, secretKey } = req.body;
 
-    if (role === 'admin' && secretKey !== process.env.ADMIN_SECRET)
+    if (role === 'admin' && secretKey !== process.env.ADMIN_SECRET) {
       return res.status(403).json({ message: 'Invalid admin secret key' });
-    if (role === 'professor' && secretKey !== process.env.PROF_SECRET)
+    }
+    if (role === 'professor' && secretKey !== process.env.PROF_SECRET) {
       return res.status(403).json({ message: 'Invalid professor secret key' });
+    }
 
     const existingEmail = await User.findOne({ email });
     if (existingEmail) return res.status(400).json({ message: 'User already exists with this email' });
 
     if (role === 'student' && enrollmentNumber) {
       const existingEnrollment = await User.findOne({ enrollmentNumber });
-      if (existingEnrollment)
+      if (existingEnrollment) {
         return res.status(400).json({ message: 'This enrollment number is already registered' });
+      }
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -43,7 +53,7 @@ exports.register = async (req, res) => {
   }
 };
 
-// ── LOGIN — Step 1: verify credentials, send OTP ──
+// ── LOGIN — direct, no OTP yet (Step 3 comes after this is confirmed working) ──
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -53,65 +63,6 @@ exports.login = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
 
-    const otp = generateOTP();
-    user.otp = await bcrypt.hash(otp, 10);
-    user.otpExpire = new Date(Date.now() + 5 * 60 * 1000);
-    await user.save();
-
-    const { error } = await resend.emails.send({
-      from: 'Smart Campus <onboarding@resend.dev>',
-      to: email,
-      subject: 'Smart Campus - Your Login OTP',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;">
-          <h2 style="color: #2563EB;">Login Verification</h2>
-          <p>Hi ${user.name},</p>
-          <p>Your one-time password is:</p>
-          <div style="text-align: center; margin: 24px 0;">
-            <span style="font-size: 36px; font-weight: bold; letter-spacing: 10px; color: #1E3A5F;">${otp}</span>
-          </div>
-          <p>This OTP expires in <strong>5 minutes</strong>.</p>
-          <p style="color: #6B7280; font-size: 12px;">If you didn't try to login, ignore this email.</p>
-        </div>
-      `
-    });
-
-    if (error) {
-      console.error('OTP EMAIL ERROR:', error);
-      return res.status(500).json({ message: 'Failed to send OTP email' });
-    }
-
-    res.status(200).json({ message: 'OTP sent to your email', email: user.email });
-  } catch (error) {
-    console.error('LOGIN ERROR:', error.message);
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-};
-
-// ── LOGIN — Step 2: verify OTP, issue token ──
-exports.verifyOTP = async (req, res) => {
-  try {
-    const { email, otp } = req.body;
-    const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: 'User not found' });
-
-    if (!user.otp || !user.otpExpire)
-      return res.status(400).json({ message: 'No OTP requested. Please login again.' });
-
-    if (new Date() > user.otpExpire) {
-      user.otp = null;
-      user.otpExpire = null;
-      await user.save();
-      return res.status(400).json({ message: 'OTP has expired. Please login again.' });
-    }
-
-    const isMatch = await bcrypt.compare(otp, user.otp);
-    if (!isMatch) return res.status(400).json({ message: 'Invalid OTP. Please try again.' });
-
-    user.otp = null;
-    user.otpExpire = null;
-    await user.save();
-
     const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
     res.status(200).json({
@@ -120,48 +71,23 @@ exports.verifyOTP = async (req, res) => {
       user: { id: user._id, name: user.name, email: user.email, role: user.role }
     });
   } catch (error) {
-    console.error('VERIFY OTP ERROR:', error.message);
+    console.error('LOGIN ERROR:', error.message);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
-// ── RESEND OTP ──
-exports.resendOTP = async (req, res) => {
+// ── TEST EMAIL — temporary, remove once confirmed working ──
+exports.testEmail = async (req, res) => {
   try {
-    const { email } = req.body;
-    const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: 'User not found' });
-
-    const otp = generateOTP();
-    user.otp = await bcrypt.hash(otp, 10);
-    user.otpExpire = new Date(Date.now() + 5 * 60 * 1000);
-    await user.save();
-
-    const { error } = await resend.emails.send({
-      from: 'Smart Campus <onboarding@resend.dev>',
-      to: email,
-      subject: 'Smart Campus - New OTP',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;">
-          <h2 style="color: #2563EB;">New OTP Requested</h2>
-          <p>Hi ${user.name}, your new OTP is:</p>
-          <div style="text-align: center; margin: 24px 0;">
-            <span style="font-size: 36px; font-weight: bold; letter-spacing: 10px; color: #1E3A5F;">${otp}</span>
-          </div>
-          <p>This OTP expires in <strong>5 minutes</strong>.</p>
-        </div>
-      `
+    await sendEmail({
+      to: req.query.to || process.env.SENDGRID_FROM_EMAIL,
+      subject: 'Smart Campus - Test Email (SendGrid)',
+      html: '<p>If you received this, SendGrid is working and can reach any recipient.</p>'
     });
-
-    if (error) {
-      console.error('RESEND OTP EMAIL ERROR:', error);
-      return res.status(500).json({ message: 'Failed to resend OTP' });
-    }
-
-    res.status(200).json({ message: 'New OTP sent to your email' });
+    res.status(200).json({ message: 'Test email sent' });
   } catch (error) {
-    console.error('RESEND OTP ERROR:', error.message);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('TEST EMAIL ERROR:', error.response?.body || error.message);
+    res.status(500).json({ message: 'Test email failed', error: error.response?.body || error.message });
   }
 };
 
@@ -180,8 +106,7 @@ exports.forgotPassword = async (req, res) => {
 
     const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
 
-    const { error } = await resend.emails.send({
-      from: 'Smart Campus <onboarding@resend.dev>',
+    await sendEmail({
       to: email,
       subject: 'Smart Campus - Password Reset',
       html: `
@@ -194,15 +119,10 @@ exports.forgotPassword = async (req, res) => {
       `
     });
 
-    if (error) {
-      console.error('FORGOT PASSWORD EMAIL ERROR:', error);
-      return res.status(500).json({ message: 'Failed to send reset email' });
-    }
-
     res.status(200).json({ message: 'Password reset link sent to your email' });
   } catch (error) {
-    console.error('FORGOT PASSWORD ERROR:', error.message);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('FORGOT PASSWORD ERROR:', error.response?.body || error.message);
+    res.status(500).json({ message: 'Failed to send reset email' });
   }
 };
 

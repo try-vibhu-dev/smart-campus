@@ -1,19 +1,6 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
-const sgMail = require('@sendgrid/mail');
-
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-
-const sendEmail = async ({ to, subject, html }) => {
-  await sgMail.send({
-    to,
-    from: process.env.SENDGRID_FROM_EMAIL,
-    subject,
-    html
-  });
-};
 
 // ── REGISTER ──
 exports.register = async (req, res) => {
@@ -53,7 +40,7 @@ exports.register = async (req, res) => {
   }
 };
 
-// ── LOGIN — direct, no OTP yet (Step 3 comes after this is confirmed working) ──
+// ── LOGIN ──
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -72,81 +59,6 @@ exports.login = async (req, res) => {
     });
   } catch (error) {
     console.error('LOGIN ERROR:', error.message);
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-};
-
-// ── TEST EMAIL — temporary, remove once confirmed working ──
-exports.testEmail = async (req, res) => {
-  try {
-    await sendEmail({
-      to: req.query.to || process.env.SENDGRID_FROM_EMAIL,
-      subject: 'Smart Campus - Test Email (SendGrid)',
-      html: '<p>If you received this, SendGrid is working and can reach any recipient.</p>'
-    });
-    res.status(200).json({ message: 'Test email sent' });
-  } catch (error) {
-    console.error('TEST EMAIL ERROR:', error.response?.body || error.message);
-    res.status(500).json({ message: 'Test email failed', error: error.response?.body || error.message });
-  }
-};
-
-// ── FORGOT PASSWORD ──
-exports.forgotPassword = async (req, res) => {
-  try {
-    const { email } = req.body;
-    const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: 'No account found with this email' });
-
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-    user.resetPasswordToken = hashedToken;
-    user.resetPasswordExpire = new Date(Date.now() + 15 * 60 * 1000);
-    await user.save();
-
-    const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
-
-    await sendEmail({
-      to: email,
-      subject: 'Smart Campus - Password Reset',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;">
-          <h2 style="color: #2563EB;">Password Reset Request</h2>
-          <p>Click the button below to reset your password. This link expires in <strong>15 minutes</strong>.</p>
-          <a href="${resetUrl}" style="display: inline-block; background: #2563EB; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin: 16px 0;">Reset Password</a>
-          <p style="color: #6B7280; font-size: 12px;">If you didn't request this, ignore this email.</p>
-        </div>
-      `
-    });
-
-    res.status(200).json({ message: 'Password reset link sent to your email' });
-  } catch (error) {
-    console.error('FORGOT PASSWORD ERROR:', error.response?.body || error.message);
-    res.status(500).json({ message: 'Failed to send reset email' });
-  }
-};
-
-// ── RESET PASSWORD ──
-exports.resetPassword = async (req, res) => {
-  try {
-    const { token } = req.params;
-    const { password } = req.body;
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-
-    const user = await User.findOne({
-      resetPasswordToken: hashedToken,
-      resetPasswordExpire: { $gt: new Date() }
-    });
-
-    if (!user) return res.status(400).json({ message: 'Invalid or expired reset link' });
-
-    user.password = await bcrypt.hash(password, 10);
-    user.resetPasswordToken = null;
-    user.resetPasswordExpire = null;
-    await user.save();
-
-    res.status(200).json({ message: 'Password reset successfully. You can now login.' });
-  } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };

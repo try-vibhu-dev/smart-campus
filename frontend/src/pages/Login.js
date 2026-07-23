@@ -109,7 +109,8 @@ const AuthPage = () => {
     !validateLogin('email', loginForm.email) &&
     !validateLogin('password', loginForm.password);
 
-const handleLoginSubmit = async (e) => {
+
+ const handleLoginSubmit = async (e) => {
   e.preventDefault();
   const allTouched = { email: true, password: true };
   const allErrors = {
@@ -123,7 +124,8 @@ const handleLoginSubmit = async (e) => {
   setLoginServerError('');
   try {
     const res = await API.post('/auth/login', loginForm);
-    navigate('/verify-otp', { state: { email: res.data.email } });
+    loginUser(res.data.user, res.data.token);
+    navigate('/dashboard');
   } catch (err) {
     setLoginServerError(err.response?.data?.message || 'Login failed.');
   }
@@ -255,11 +257,6 @@ const handleLoginSubmit = async (e) => {
               {loginTouched.password && loginErrors.password && (
                 <p className="text-red-400 text-xs mt-1 flex items-center space-x-1"><AlertCircle size={11} /><span>{loginErrors.password}</span></p>
               )}
-              <div className="text-right mt-1">
-                <Link to="/forgot-password" className="text-blue-400 hover:text-blue-300 text-xs font-medium transition">
-                  Forgot Password?
-                </Link>
-              </div>
             </div>
 
             <button type="submit" disabled={loginLoading}
